@@ -1,0 +1,18 @@
+﻿@{
+    ViewBag.Title = "上传更新文件";
+}
+<h2>可以一次选多个文件,包括压缩文件或普通dll文件，压缩文件内不要包含文件夹 </h2>
+<form action="/Home/Upload" method="POST" enctype="multipart/form-data">
+    <input type="file" name="file1" multiple="multiple" /><br />
+    <input type="file" name="file2" multiple="multiple" /><br />
+    <input type="file" name="file3" multiple="multiple" /><br />
+    <input type="submit" name="Submit" value="上传文件" />
+</form>
+<div class="multiline">
+    @if (TempData["message"] != null)
+    {
+        <h3>更新信息：</h3>
+        @Html.Raw(@TempData["message"].ToString())    
+    }
+</div>
+
