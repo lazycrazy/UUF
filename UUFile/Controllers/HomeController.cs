@@ -123,8 +123,10 @@ namespace UUFile.Controllers
                     System.IO.File.Copy(ftpFileName, CurFtpBakPath + newFileInfo.Name, true);
                 log.AppendLine("    " + newFileInfo.Name);
             }
-            System.IO.File.Copy(ConfigInfo.ClientIniPath, CurFtpBakPath + new FileInfo(ConfigInfo.ClientIniPath).Name, true);
-            System.IO.File.Copy(ConfigInfo.ServerIniPath, CurFtpBakPath + new FileInfo(ConfigInfo.ServerIniPath).Name, true);
+            if (System.IO.File.Exists(ConfigInfo.ClientIniPath))
+                System.IO.File.Copy(ConfigInfo.ClientIniPath, CurFtpBakPath + new FileInfo(ConfigInfo.ClientIniPath).Name, true);
+            if (System.IO.File.Exists(ConfigInfo.ServerIniPath))
+                System.IO.File.Copy(ConfigInfo.ServerIniPath, CurFtpBakPath + new FileInfo(ConfigInfo.ServerIniPath).Name, true);
         }
 
         [StepInfo("更新文件覆盖到FTP")]
@@ -149,8 +151,10 @@ namespace UUFile.Controllers
         [StepInfo("增加版本号")]
         private void AddUploadFilesVers()
         {
-            AddUploadFilesVers(ConfigInfo.ClientIniPath);
-            AddUploadFilesVers(ConfigInfo.ServerIniPath);
+            if (System.IO.File.Exists(ConfigInfo.ClientIniPath))
+                AddUploadFilesVers(ConfigInfo.ClientIniPath);
+            if (System.IO.File.Exists(ConfigInfo.ServerIniPath))
+                AddUploadFilesVers(ConfigInfo.ServerIniPath);
         }
 
         [StepInfo("删除临时文件")]
