@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Ionic.Zip;
+using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
@@ -21,7 +22,7 @@ namespace UUFile.Controllers
             get
             {
                 if (_ProcessUpload == null)
-                    _ProcessUpload = new Action[] { Begin, SaveUplodFiles, CopyUploadFilesToWorkSpace, UpzipUploadFilesToWorkSpace, BakFtpFiles, UpdateToFtp, AddUploadFilesVers, DeleteTempFiles, DeleteExpiryFiles, End };
+                    _ProcessUpload = new Action[] { Begin, SaveUplodFiles, UpzipUploadFilesToWorkSpace, CopyUploadFilesToWorkSpace, BakFtpFiles, UpdateToFtp, AddUploadFilesVers, DeleteTempFiles, DeleteExpiryFiles, End };
                 return _ProcessUpload;
             }
         }
@@ -87,26 +88,40 @@ namespace UUFile.Controllers
             }
         }
 
-        [StepInfo("复制更新文件到临时目录")]
+        [StepInfo("解压更新文件到上传目录")]
+        private void UpzipUploadFilesToWorkSpace()
+        {
+            foreach (var file in Directory.GetFiles(CurUploadPath, "*.*", SearchOption.AllDirectories).Where(s => s.EndsWith(".zip")).ToList())
+            {
+                ZipFile.Read(file).ExtractAll(CurUploadPath, ExtractExistingFileAction.OverwriteSilently);
+                log.AppendLine(string.Join("\r\n", "解压zip文件 " + file));
+            }
+
+        }
+
+        [StepInfo("压缩更新文件到临时目录")]
         private void CopyUploadFilesToWorkSpace()
         {
+            log.AppendLine("压缩dll文件：");
+
             foreach (var file in Directory.GetFiles(CurUploadPath, "*.*", SearchOption.AllDirectories).Where(s => s.EndsWith(".dll") || s.EndsWith(".exe")))
             {
-                var fileName = new FileInfo(file).Name;
-                System.IO.File.Copy(file, ConfigInfo.WorkSpace + fileName, true);
+                var fileName = Path.GetFileNameWithoutExtension(file);
+                using (ZipFile zip = new ZipFile(ConfigInfo.WorkSpace + fileName + ".zip", Encoding.Default))
+                {
+                    //// 加密压缩  
+                    //zip.Password = "123456";
+                    //// 将要压缩的文件夹添加到 zip 对象中去 (要压缩的文件夹路径和名称)  
+                    //zip.AddDirectory(@"E:\\yangfeizai\\" + "12051214544443");
+                    // 将要压缩的文件添加到 zip 对象中去, 如果文件不存在抛错 FileNotFoundExcept  
+                    zip.AddFile(file);
+                    zip.Save();
+                }
                 log.AppendLine("    " + fileName);
             }
         }
 
-        [StepInfo("解压更新文件到临时目录")]
-        private void UpzipUploadFilesToWorkSpace()
-        {
-            foreach (var file in Directory.GetFiles(CurUploadPath, "*.*", SearchOption.AllDirectories).Where(s => s.EndsWith(".zip") || s.EndsWith(".rar")))
-            {
-                var fileInfo = new FileInfo(file);
-                log.AppendLine(string.Join("\r\n", Helper.Decompress(fileInfo, ConfigInfo.WorkSpace)));
-            }
-        }
+
 
 
 

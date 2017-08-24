@@ -9,6 +9,7 @@ using System.Text;
 using System.Web;
 using System.Web.Mvc;
 using UUFile.Controllers;
+using Ionic.Zip;
 
 namespace UUFile.Infrastructure
 {
@@ -47,6 +48,7 @@ namespace UUFile.Infrastructure
             config.Save(System.Configuration.ConfigurationSaveMode.Modified);
             //WebConfigurationManager.RefreshSection("appSettings");
         }
+
 
         public static List<string> Decompress(FileInfo fi, string path)
         {
