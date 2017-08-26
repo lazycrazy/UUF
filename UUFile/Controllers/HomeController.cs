@@ -38,10 +38,13 @@ namespace UUFile.Controllers
         private string CurUploadPath;
         private string CurFtpBakPath
         {
-            get { return CurUploadPath + "FTP备份\\"; ; }
+            get { return CurUploadPath + "FTP备份\\"; }
         }
 
-
+        private string CurTemp
+        {
+            get { return CurUploadPath + "temp\\"; }
+        }
 
         [Authorize]
         [HttpPost]
@@ -91,9 +94,13 @@ namespace UUFile.Controllers
         [StepInfo("解压更新文件到上传目录")]
         private void UpzipUploadFilesToWorkSpace()
         {
-            foreach (var file in Directory.GetFiles(CurUploadPath, "*.*", SearchOption.AllDirectories).Where(s => s.EndsWith(".zip")).ToList())
+            foreach (var file in Directory.GetFiles(CurUploadPath, "*.*", SearchOption.TopDirectoryOnly).Where(s => s.EndsWith(".zip")).ToList())
             {
-                ZipFile.Read(file).ExtractAll(CurUploadPath, ExtractExistingFileAction.OverwriteSilently);
+                using (var zipFile = ZipFile.Read(file))
+                {
+                    zipFile.ExtractAll(CurUploadPath, ExtractExistingFileAction.OverwriteSilently);
+                }
+
                 log.AppendLine(string.Join("\r\n", "解压zip文件 " + file));
             }
 
@@ -104,18 +111,20 @@ namespace UUFile.Controllers
         {
             log.AppendLine("压缩dll文件：");
 
-            foreach (var file in Directory.GetFiles(CurUploadPath, "*.*", SearchOption.AllDirectories).Where(s => s.EndsWith(".dll") || s.EndsWith(".exe")))
+            foreach (var file in Directory.GetFiles(CurUploadPath, "*.*", SearchOption.TopDirectoryOnly).Where(s => s.EndsWith(".dll") || s.EndsWith(".exe")).ToList())
             {
                 var fileName = Path.GetFileNameWithoutExtension(file);
-                using (ZipFile zip = new ZipFile(ConfigInfo.WorkSpace + fileName + ".zip", Encoding.Default))
+                if (!Directory.Exists(CurTemp))
+                    Directory.CreateDirectory(CurTemp);
+                using (ZipFile zip = new ZipFile())
                 {
                     //// 加密压缩  
                     //zip.Password = "123456";
                     //// 将要压缩的文件夹添加到 zip 对象中去 (要压缩的文件夹路径和名称)  
                     //zip.AddDirectory(@"E:\\yangfeizai\\" + "12051214544443");
                     // 将要压缩的文件添加到 zip 对象中去, 如果文件不存在抛错 FileNotFoundExcept  
-                    zip.AddFile(file);
-                    zip.Save();
+                    zip.AddFile(file, "");
+                    zip.Save(CurTemp + fileName + ".zip");
                 }
                 log.AppendLine("    " + fileName);
             }
@@ -128,7 +137,7 @@ namespace UUFile.Controllers
         [StepInfo("备份FTP旧文件")]
         private void BakFtpFiles()
         {
-            foreach (var file in Directory.GetFiles(ConfigInfo.WorkSpace))
+            foreach (var file in Directory.GetFiles(CurTemp))
             {
                 if (!Directory.Exists(CurFtpBakPath))
                     Directory.CreateDirectory(CurFtpBakPath);
@@ -147,7 +156,7 @@ namespace UUFile.Controllers
         [StepInfo("更新文件覆盖到FTP")]
         private void UpdateToFtp()
         {
-            foreach (var file in Directory.GetFiles(ConfigInfo.WorkSpace))
+            foreach (var file in Directory.GetFiles(CurTemp))
             {
                 var newFileInfo = new FileInfo(file);
                 System.IO.File.Copy(file, ConfigInfo.FtpDLLPath + newFileInfo.Name, true);
@@ -159,7 +168,7 @@ namespace UUFile.Controllers
         {
             var fileInfo = new FileInfo(iniFilePath);
             log.BeginLogSection(string.Format("增加 {0} 版本号", fileInfo.Name));
-            log.AppendLine(string.Join("\r\n", new IniParser(fileInfo.FullName).AddIniSectionVers(ConfigInfo.WorkSpace).logs));
+            log.AppendLine(string.Join("\r\n", new IniParser(fileInfo.FullName).AddIniSectionVers(CurTemp).logs));
 
         }
 
@@ -175,12 +184,15 @@ namespace UUFile.Controllers
         [StepInfo("删除临时文件")]
         private void DeleteTempFiles()
         {
-            foreach (var file in Directory.GetFiles(ConfigInfo.WorkSpace))
-            {
-                var newFileInfo = new FileInfo(file);
-                newFileInfo.Delete();
-                log.AppendLine("    " + newFileInfo.Name);
-            }
+            Directory.Delete(CurTemp, true);
+            log.AppendLine("    " + "删除临时目录 " + CurTemp);
+
+            //foreach (var file in Directory.GetFiles(ConfigInfo.WorkSpace))
+            //{
+            //    var newFileInfo = new FileInfo(file);
+            //    newFileInfo.Delete();
+            //    log.AppendLine("    " + newFileInfo.Name);
+            //}
         }
 
         [StepInfo("删除历史更新文件")]
